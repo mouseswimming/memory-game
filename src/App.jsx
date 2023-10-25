@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import DeckCard from "./components/DeckCard";
 import WinningMessage from "./components/WinningMessage";
+import RetryMessage from "./components/RetryMessage";
 
 const cards = [
   { src: "/img/poke1.png" },
@@ -26,12 +27,14 @@ const cards = [
   { src: "/img/poke20.png" },
 ];
 
-const fourColumns = [6, 8];
+const cardNumOptions = [2, 4, 6, 8, 9, 10, 12, 15, 18];
+
+const fourColumns = [2, 4, 6, 8];
 const fiveColumns = [10];
 const sixColumns = [9, 12, 15, 18];
 
 function App() {
-  const [cardNumber, setCardNumber] = useState(6);
+  const [cardNumber, setCardNumber] = useState(0);
   const [deck, setDeck] = useState([]);
   const [disableCard, setDisableCard] = useState(false);
   const [choiceOne, setChoiceOne] = useState(null);
@@ -40,6 +43,10 @@ function App() {
   const [maxTry, setMaxTry] = useState(0);
   const [win, setWin] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [winFeedback, setWinFeedback] = useState("");
+  const [level, setLevel] = useState(0);
+
+  const cardContainer = useRef(null);
 
   useEffect(() => {
     if (choiceOne && choiceTwo) {
@@ -62,24 +69,28 @@ function App() {
           resetTurn();
         }, 1000);
       }
-    }
-  }, [choiceOne, choiceTwo]);
-
-  useEffect(() => {
-    startNewGame();
-  }, []);
-
-  useEffect(() => {
-    const pairedNum = deck.filter((card) => card.matched).length;
-
-    if (pairedNum === cardNumber * 2) {
-      setWin(true);
     } else {
       if (tryNumber !== 0 && maxTry === tryNumber) {
         setGameOver(true);
       }
     }
+  }, [choiceOne, choiceTwo]);
+
+  useEffect(() => {
+    setCardNumber(cardNumOptions[0]);
+  }, []);
+
+  useEffect(() => {
+    const pairedNum = deck.filter((card) => card.matched).length;
+    if (pairedNum === cardNumber * 2) {
+      setWin(true);
+      findNextLevel();
+    }
   }, [deck]);
+
+  useEffect(() => {
+    startNewGame();
+  }, [cardNumber]);
 
   function resetTurn() {
     setChoiceOne(null);
@@ -90,8 +101,6 @@ function App() {
   function shuffleCards(cards) {
     return [...cards].sort(() => Math.random() - 0.5);
   }
-
-  const cardContainer = useRef(null);
 
   function findGridCol() {
     if (fourColumns.includes(cardNumber)) return 4;
@@ -113,7 +122,7 @@ function App() {
     shuffledDeck = shuffleCards(shuffleCards(shuffledDeck));
     setDeck(shuffledDeck);
 
-    setMaxTry(Math.round(cardNumber * 2.5));
+    setMaxTry(Math.round(cardNumber * Math.sqrt(cardNumber) + cardNumber));
     setTryNumber(0);
     setWin(false);
     setGameOver(false);
@@ -130,8 +139,30 @@ function App() {
     );
   }
 
-  function handleLevelUp() {
-    startNewGame();
+  function findNextLevel() {
+    const curIndex = cardNumOptions.findIndex((num) => {
+      return num === cardNumber;
+    });
+
+    if (gameOver) return setWinFeedback("That is okay, let's try agian!");
+
+    if (curIndex === cardNumOptions.length - 1) {
+      setWinFeedback(
+        "You have compolished the most difficult level, Do you want to challenge again?"
+      );
+      setLevel(cardNumOptions.length);
+    } else {
+      setWinFeedback("Let's try something more challenging!");
+      setLevel(curIndex + 1);
+    }
+  }
+
+  function handleRestartGame() {
+    if (level < cardNumOptions.length) {
+      setCardNumber(cardNumOptions[level]);
+    } else {
+      startNewGame();
+    }
   }
 
   return (
@@ -147,13 +178,11 @@ function App() {
               value={cardNumber}
               onChange={(e) => setCardNumber(Number(e.target.value))}
             >
-              <option value="6">12 Cards</option>
-              <option value="8">16 Cards</option>
-              <option value="9">18 Cards</option>
-              <option value="10">20 Cards</option>
-              <option value="12">24 Cards</option>
-              <option value="15">30 Cards</option>
-              <option value="18">36 Cards</option>
+              {cardNumOptions.map((num) => (
+                <option value={num} key={num}>
+                  {num * 2} Cards
+                </option>
+              ))}
             </select>
             <button onClick={startNewGame}>New Game</button>
           </div>
@@ -163,7 +192,7 @@ function App() {
         </div>
       )}
       <div
-        className={`card-container ${win ? "hidden" : ""}`}
+        className={`card-container ${win || gameOver ? "hidden" : ""}`}
         id="card-container"
         ref={cardContainer}
       >
@@ -179,8 +208,13 @@ function App() {
           ))}
         </div>
       </div>
-      {win && <WinningMessage handleLevelUp={handleLevelUp} />}
-      {gameOver && <h2>Too bad.. try again.</h2>}
+      {win && (
+        <WinningMessage
+          handleRestartGame={handleRestartGame}
+          winFeedback={winFeedback}
+        />
+      )}
+      {gameOver && !win && <RetryMessage startNewGame={startNewGame} />}
     </>
   );
 }
