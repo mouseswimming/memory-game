@@ -1,0 +1,33 @@
+.deck-card {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid white;
+  position: relative;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.card-front {
+  position: absolute;
+  transform: rotateY(90deg);
+  transition: all ease-in-out 0.2s;
+}
+
+.flipped .card-front {
+  transform: rotateY(0deg);
+  transition-delay: 0.2s;
+}
+
+.card-back {
+  cursor: pointer;
+  transition: all ease-in-out 0.2s;
+  transition-delay: 0.2s;
+}
+
+.flipped .card-back {
+  transform: rotateY(90deg);
+  transition-delay: 0s;
+}
